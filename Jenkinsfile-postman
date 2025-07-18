@@ -1,0 +1,364 @@
+pipeline {
+    agent any
+
+    tools {
+        nodejs "NodeJS-18" // Update this to match your configured NodeJS tool name
+        maven "Maven-3.8.1"
+        jdk "JDK-11"
+    }
+
+    // Environment variables
+    environment {
+        // Postman API Key - Consider using Jenkins credentials instead of hardcoding
+        POSTMAN_API_KEY = 'PMAK-686c87b30799d00001fb4cf2-38987497d4fff73575d08d5f4d22995e88'
+        
+        // Collection and Environment IDs
+        COLLECTION_ID = '46489438-936dba4f-e48a-4492-b851-3fde7b2ee77f'
+        ENVIRONMENT_ID = '46489438-c7cd65fd-f160-474a-9aa3-22f8c4ef0521'
+        
+        // Test configuration
+        TEST_ENV = "${params.ENVIRONMENT ?: 'dev'}"
+        PARALLEL_RUNS = "${params.PARALLEL_RUNS ?: '1'}"
+        
+        // Notification settings
+        EMAIL_RECIPIENTS = 'team@company.com'
+    }
+
+    // Build parameters
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'staging', 'prod'],
+            description: 'Environment to run tests against'
+        )
+        choice(
+            name: 'PARALLEL_RUNS',
+            choices: ['1', '2', '3', '5'],
+            description: 'Number of parallel test runs'
+        )
+        booleanParam(
+            name: 'VERBOSE_OUTPUT',
+            defaultValue: false,
+            description: 'Enable verbose output for debugging'
+        )
+        booleanParam(
+            name: 'GENERATE_HTML_REPORT',
+            defaultValue: true,
+            description: 'Generate HTML test reports'
+        )
+    }
+
+    // Build options
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '30'))
+        timeout(time: 30, unit: 'MINUTES')
+        retry(1)
+        skipStagesAfterUnstable()
+        ansiColor('xterm')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    echo "🔄 Checking out source code..."
+                    checkout scm
+                    
+                    // Set build display name
+                    currentBuild.displayName = "#${BUILD_NUMBER} - Postman - ${TEST_ENV}"
+                    currentBuild.description = "Postman API Tests - Environment: ${TEST_ENV}"
+                }
+            }
+        }
+
+        stage('Setup Environment') {
+            steps {
+                script {
+                    echo "🔧 Setting up test environment..."
+                    
+                    // Create necessary directories
+                    sh '''
+                        mkdir -p reports
+                        mkdir -p logs
+                        mkdir -p newman-results
+                    '''
+                    
+                    // Display environment information
+                    sh '''
+                        echo "Node.js Version:"
+                        node --version
+                        echo "NPM Version:"
+                        npm --version
+                        echo "Current Environment: ${TEST_ENV}"
+                    '''
+                }
+            }
+        }
+
+        stage('Install Postman CLI') {
+            steps {
+                script {
+                    echo "📦 Installing Postman CLI..."
+                    sh '''
+                        # Install Postman CLI
+                        curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+                        
+                        # Add to PATH for current session
+                        export PATH="$HOME/.postman-cli/bin:$PATH"
+                        
+                        # Verify installation
+                        postman --version || echo "Postman CLI installation may need PATH update"
+                    '''
+                }
+            }
+        }
+
+        stage('Install Newman') {
+            steps {
+                script {
+                    echo "📦 Installing Newman (alternative runner)..."
+                    sh '''
+                        # Install Newman globally
+                        npm install -g newman
+                        npm install -g newman-reporter-html
+                        npm install -g newman-reporter-htmlextra
+                        
+                        # Verify installation
+                        newman --version
+                    '''
+                }
+            }
+        }
+
+        stage('Postman CLI Login') {
+            steps {
+                script {
+                    echo "🔐 Authenticating with Postman..."
+                    sh '''
+                        # Add Postman CLI to PATH
+                        export PATH="$HOME/.postman-cli/bin:$PATH"
+                        
+                        # Login with API key
+                        postman login --with-api-key $POSTMAN_API_KEY
+                        
+                        # Verify login
+                        postman whoami
+                    '''
+                }
+            }
+        }
+
+        stage('Run Postman Collection') {
+            parallel {
+                stage('Postman CLI Execution') {
+                    steps {
+                        script {
+                            echo "🚀 Running collection with Postman CLI..."
+                            sh '''
+                                # Add Postman CLI to PATH
+                                export PATH="$HOME/.postman-cli/bin:$PATH"
+                                
+                                # Run the collection
+                                postman collection run "${COLLECTION_ID}" -e "${ENVIRONMENT_ID}" \\
+                                    --verbose \\
+                                    --reporter-cli \\
+                                    --output-file "reports/postman-cli-results.json" || true
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Newman Execution') {
+                    steps {
+                        script {
+                            echo "🧪 Running collection with Newman..."
+                            sh '''
+                                # Run with Newman for better reporting
+                                newman run "https://api.getpostman.com/collections/${COLLECTION_ID}?apikey=${POSTMAN_API_KEY}" \\
+                                    --environment "https://api.getpostman.com/environments/${ENVIRONMENT_ID}?apikey=${POSTMAN_API_KEY}" \\
+                                    --reporters cli,json,html,htmlextra \\
+                                    --reporter-json-export "newman-results/newman-report.json" \\
+                                    --reporter-html-export "newman-results/newman-report.html" \\
+                                    --reporter-htmlextra-export "newman-results/newman-detailed-report.html" \\
+                                    --reporter-htmlextra-title "API Test Results - ${TEST_ENV}" \\
+                                    --reporter-htmlextra-logs \\
+                                    --color on \\
+                                    --timeout-request 30000 \\
+                                    --timeout-script 10000 || true
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Process Results') {
+            steps {
+                script {
+                    echo "📊 Processing test results..."
+                    sh '''
+                        # Check if Newman results exist and process them
+                        if [ -f "newman-results/newman-report.json" ]; then
+                            echo "Newman results found, processing..."
+                            
+                            # Extract test summary
+                            node -e "
+                                const fs = require('fs');
+                                const report = JSON.parse(fs.readFileSync('newman-results/newman-report.json'));
+                                const stats = report.run.stats;
+                                
+                                console.log('=== TEST EXECUTION SUMMARY ===');
+                                console.log('Total Requests:', stats.requests.total);
+                                console.log('Failed Requests:', stats.requests.failed);
+                                console.log('Total Assertions:', stats.assertions.total);
+                                console.log('Failed Assertions:', stats.assertions.failed);
+                                console.log('Average Response Time:', Math.round(report.run.timings.responseAverage) + 'ms');
+                                
+                                // Write summary to file
+                                const summary = {
+                                    environment: process.env.TEST_ENV,
+                                    build: process.env.BUILD_NUMBER,
+                                    timestamp: new Date().toISOString(),
+                                    stats: stats,
+                                    avgResponseTime: Math.round(report.run.timings.responseAverage)
+                                };
+                                
+                                fs.writeFileSync('newman-results/test-summary.json', JSON.stringify(summary, null, 2));
+                            " || echo "Failed to process Newman results"
+                        else
+                            echo "No Newman results found"
+                        fi
+                    '''
+                }
+            }
+        }
+
+        stage('Quality Gates') {
+            steps {
+                script {
+                    echo "🎯 Checking quality gates..."
+                    
+                    // Check test results and set build status
+                    def testPassed = sh(
+                        script: '''
+                            if [ -f "newman-results/newman-report.json" ]; then
+                                node -e "
+                                    const report = JSON.parse(require('fs').readFileSync('newman-results/newman-report.json'));
+                                    const failed = report.run.stats.assertions.failed;
+                                    process.exit(failed > 0 ? 1 : 0);
+                                "
+                            else
+                                exit 1
+                            fi
+                        ''',
+                        returnStatus: true
+                    )
+                    
+                    if (testPassed != 0) {
+                        echo "⚠️ Some tests failed, marking build as unstable"
+                        currentBuild.result = 'UNSTABLE'
+                    } else {
+                        echo "✅ All tests passed!"
+                    }
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                echo "📤 Publishing test results..."
+                
+                // Archive artifacts
+                archiveArtifacts artifacts: '''
+                    newman-results/**/*,
+                    reports/**/*,
+                    logs/**/*
+                ''', allowEmptyArchive: true
+                
+                // Publish HTML reports
+                publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'newman-results',
+                    reportFiles: 'newman-detailed-report.html',
+                    reportName: 'Newman Test Report',
+                    reportTitles: 'API Test Results'
+                ])
+            }
+        }
+        
+        success {
+            script {
+                echo "✅ All Postman tests passed successfully!"
+                
+                emailext (
+                    to: "${EMAIL_RECIPIENTS}",
+                    subject: "✅ Postman API Tests PASSED - ${TEST_ENV} - Build #${BUILD_NUMBER}",
+                    body: """
+                        <h2>Postman API Test Execution Successful</h2>
+                        <p><strong>Environment:</strong> ${TEST_ENV}</p>
+                        <p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>
+                        <p><strong>Duration:</strong> ${currentBuild.durationString}</p>
+                        <p><strong>View Reports:</strong> <a href="${BUILD_URL}Newman_Test_Report/">Test Report</a></p>
+                        
+                        <p>All API tests executed successfully!</p>
+                    """,
+                    mimeType: 'text/html'
+                )
+            }
+        }
+        
+        failure {
+            script {
+                echo "❌ Postman pipeline failed!"
+                
+                emailext (
+                    to: "${EMAIL_RECIPIENTS}",
+                    subject: "❌ Postman API Tests FAILED - ${TEST_ENV} - Build #${BUILD_NUMBER}",
+                    body: """
+                        <h2>Postman API Test Execution Failed</h2>
+                        <p><strong>Environment:</strong> ${TEST_ENV}</p>
+                        <p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>
+                        <p><strong>Duration:</strong> ${currentBuild.durationString}</p>
+                        <p><strong>View Logs:</strong> <a href="${BUILD_URL}console">Console Output</a></p>
+                        
+                        <p style="color: red;">Please check the logs and fix the failing tests.</p>
+                    """,
+                    mimeType: 'text/html'
+                )
+            }
+        }
+        
+        unstable {
+            script {
+                echo "⚠️ Some Postman tests failed, build marked as unstable"
+                
+                emailext (
+                    to: "${EMAIL_RECIPIENTS}",
+                    subject: "⚠️ Postman API Tests UNSTABLE - ${TEST_ENV} - Build #${BUILD_NUMBER}",
+                    body: """
+                        <h2>Postman API Test Execution Unstable</h2>
+                        <p><strong>Environment:</strong> ${TEST_ENV}</p>
+                        <p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>
+                        <p><strong>Duration:</strong> ${currentBuild.durationString}</p>
+                        <p><strong>View Reports:</strong> <a href="${BUILD_URL}Newman_Test_Report/">Test Report</a></p>
+                        
+                        <p style="color: orange;">Some tests failed. Please review the test results.</p>
+                    """,
+                    mimeType: 'text/html'
+                )
+            }
+        }
+        
+        cleanup {
+            script {
+                echo "🧹 Cleaning up..."
+                // Clean workspace
+                cleanWs()
+            }
+        }
+    }
+}

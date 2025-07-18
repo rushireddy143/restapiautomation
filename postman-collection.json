@@ -1,0 +1,458 @@
+{
+  "info": {
+    "name": "REST Assured API Tests Collection",
+    "description": "Collection of API tests converted from REST Assured test cases",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "version": {
+      "major": 1,
+      "minor": 0,
+      "patch": 0
+    }
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "x-api-key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{api_key}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "https://reqres.in",
+      "type": "string",
+      "description": "Base URL for the API"
+    },
+    {
+      "key": "api_key",
+      "value": "reqres-free-v1",
+      "type": "string",
+      "description": "API Key for authentication"
+    },
+    {
+      "key": "user_id",
+      "value": "2",
+      "type": "string",
+      "description": "User ID for testing"
+    }
+  ],
+  "item": [
+    {
+      "name": "Get Users",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Test: Verify status code is 200",
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Test: Verify response has data array",
+              "pm.test('Response contains data array', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson).to.have.property('data');",
+              "    pm.expect(responseJson.data).to.be.an('array');",
+              "});",
+              "",
+              "// Test: Verify first user has ID",
+              "pm.test('First user has ID', function () {",
+              "    const responseJson = pm.response.json();",
+              "    if (responseJson.data.length > 0) {",
+              "        pm.expect(responseJson.data[0]).to.have.property('id');",
+              "        pm.expect(responseJson.data[0].id).to.not.be.null;",
+              "    }",
+              "});",
+              "",
+              "// Test: Verify data array size is greater than 0",
+              "pm.test('Data array size is greater than 0', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.data.length).to.be.greaterThan(0);",
+              "});",
+              "",
+              "// Test: Response time is acceptable",
+              "pm.test('Response time is less than 2000ms', function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/api/users?page=2",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "users"
+          ],
+          "query": [
+            {
+              "key": "page",
+              "value": "2",
+              "description": "Page number for pagination"
+            }
+          ]
+        },
+        "description": "Retrieve users from page 2 and verify response structure"
+      },
+      "response": []
+    },
+    {
+      "name": "Create User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Test: Verify status code is 201",
+              "pm.test('Status code is 201 (Created)', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "// Test: Verify user name is correct",
+              "pm.test('User name is Rushi', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.name).to.equal('Rushi');",
+              "});",
+              "",
+              "// Test: Verify user job is correct",
+              "pm.test('User job is QA Engineer', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.job).to.equal('QA Engineer');",
+              "});",
+              "",
+              "// Test: Verify response contains ID",
+              "pm.test('Response contains user ID', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson).to.have.property('id');",
+              "    pm.expect(responseJson.id).to.not.be.null;",
+              "});",
+              "",
+              "// Test: Verify response contains createdAt timestamp",
+              "pm.test('Response contains createdAt timestamp', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson).to.have.property('createdAt');",
+              "    pm.expect(responseJson.createdAt).to.not.be.null;",
+              "});",
+              "",
+              "// Store created user ID for future requests",
+              "const responseJson = pm.response.json();",
+              "if (responseJson.id) {",
+              "    pm.collectionVariables.set('created_user_id', responseJson.id);",
+              "}"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Rushi\",\n  \"job\": \"QA Engineer\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/users",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "users"
+          ]
+        },
+        "description": "Create a new user with name and job title"
+      },
+      "response": []
+    },
+    {
+      "name": "Update User (PUT)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Test: Verify status code is 200",
+              "pm.test('Status code is 200 (OK)', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Test: Verify updated user name",
+              "pm.test('Updated user name is Rushi', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.name).to.equal('Rushi');",
+              "});",
+              "",
+              "// Test: Verify updated user job",
+              "pm.test('Updated user job is Senior QA Engineer', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.job).to.equal('Senior QA Engineer');",
+              "});",
+              "",
+              "// Test: Verify response contains updatedAt timestamp",
+              "pm.test('Response contains updatedAt timestamp', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson).to.have.property('updatedAt');",
+              "    pm.expect(responseJson.updatedAt).to.not.be.null;",
+              "});",
+              "",
+              "// Test: Verify response time",
+              "pm.test('Response time is acceptable', function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Rushi\",\n  \"job\": \"Senior QA Engineer\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/users/{{user_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "users",
+            "{{user_id}}"
+          ]
+        },
+        "description": "Update user information using PUT method (full update)"
+      },
+      "response": []
+    },
+    {
+      "name": "Update User (PATCH)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Test: Verify status code is 200",
+              "pm.test('Status code is 200 (OK)', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "// Test: Verify updated job title",
+              "pm.test('Updated job is Lead QA Engineer', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.job).to.equal('Lead QA Engineer');",
+              "});",
+              "",
+              "// Test: Verify response contains updatedAt timestamp",
+              "pm.test('Response contains updatedAt timestamp', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson).to.have.property('updatedAt');",
+              "    pm.expect(responseJson.updatedAt).to.not.be.null;",
+              "});",
+              "",
+              "// Test: Verify content type",
+              "pm.test('Content-Type header is application/json', function () {",
+              "    pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+              "});",
+              "",
+              "// Test: Response time is acceptable",
+              "pm.test('Response time is less than 2000ms', function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"job\": \"Lead QA Engineer\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/api/users/{{user_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "users",
+            "{{user_id}}"
+          ]
+        },
+        "description": "Partially update user information using PATCH method"
+      },
+      "response": []
+    },
+    {
+      "name": "Delete User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "// Test: Verify status code is 204",
+              "pm.test('Status code is 204 (No Content)', function () {",
+              "    pm.response.to.have.status(204);",
+              "});",
+              "",
+              "// Test: Verify response body is empty",
+              "pm.test('Response body is empty', function () {",
+              "    pm.expect(pm.response.text()).to.be.empty;",
+              "});",
+              "",
+              "// Test: Verify response time",
+              "pm.test('Response time is acceptable', function () {",
+              "    pm.expect(pm.response.responseTime).to.be.below(2000);",
+              "});",
+              "",
+              "// Test: Verify deletion was successful",
+              "pm.test('User deletion completed successfully', function () {",
+              "    // Status 204 indicates successful deletion",
+              "    pm.expect(pm.response.status).to.equal('No Content');",
+              "});",
+              "",
+              "// Clean up collection variable",
+              "pm.collectionVariables.unset('created_user_id');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{api_key}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/api/users/{{user_id}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "api",
+            "users",
+            "{{user_id}}"
+          ]
+        },
+        "description": "Delete a user by ID"
+      },
+      "response": []
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection level pre-request script",
+          "console.log('Starting API test execution...');",
+          "",
+          "// Set timestamp for this test run",
+          "pm.collectionVariables.set('test_run_timestamp', new Date().toISOString());"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Collection level test script",
+          "console.log('Test completed at: ' + new Date().toISOString());",
+          "",
+          "// Global test: Verify response is received",
+          "pm.test('Response received successfully', function () {",
+          "    pm.expect(pm.response).to.be.ok;",
+          "});",
+          "",
+          "// Global test: Verify response format is JSON (except for DELETE)",
+          "if (pm.request.method !== 'DELETE') {",
+          "    pm.test('Response format is JSON', function () {",
+          "        pm.expect(pm.response.headers.get('Content-Type')).to.include('application/json');",
+          "    });",
+          "}"
+        ]
+      }
+    }
+  ]
+}

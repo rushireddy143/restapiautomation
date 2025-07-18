@@ -1,0 +1,71 @@
+{
+  "users": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "email": "john.doe@example.com",
+      "job": "Software Engineer",
+      "age": 30,
+      "city": "New York"
+    },
+    {
+      "id": 2,
+      "name": "Jane Smith",
+      "email": "jane.smith@example.com",
+      "job": "Product Manager",
+      "age": 28,
+      "city": "San Francisco"
+    },
+    {
+      "id": 3,
+      "name": "Bob Johnson",
+      "email": "bob.johnson@example.com",
+      "job": "QA Engineer",
+      "age": 32,
+      "city": "Seattle"
+    }
+  ],
+  "loginCredentials": {
+    "valid": {
+      "email": "eve.holt@reqres.in",
+      "password": "cityslicka"
+    },
+    "invalid": {
+      "email": "invalid@email.com",
+      "password": "wrongpassword"
+    }
+  },
+  "testScenarios": {
+    "userCreation": [
+      {
+        "name": "Alice Williams",
+        "job": "Designer",
+        "expectedStatus": 201
+      },
+      {
+        "name": "Charlie Brown",
+        "job": "Developer",
+        "expectedStatus": 201
+      },
+      {
+        "name": "",
+        "job": "",
+        "expectedStatus": 400
+      }
+    ],
+    "userUpdate": [
+      {
+        "userId": 2,
+        "name": "Updated Name",
+        "job": "Updated Job",
+        "expectedStatus": 200
+      }
+    ]
+  },
+  "apiEndpoints": {
+    "users": "/users",
+    "login": "/login",
+    "register": "/register",
+    "singleUser": "/users/{id}"
+  }
+}

@@ -1,0 +1,315 @@
+jenkins:
+  systemMessage: "REST Assured API Automation Jenkins Server"
+  
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "admin123"
+          
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+  globalNodeProperties:
+    - envVars:
+        env:
+          - key: "JAVA_HOME"
+            value: "/usr/lib/jvm/java-11-openjdk"
+          - key: "MAVEN_HOME"
+            value: "/opt/maven"
+          - key: "ALLURE_HOME"
+            value: "/opt/allure"
+
+  nodes:
+    - permanent:
+        name: "api-test-node"
+        labelString: "api-automation"
+        mode: EXCLUSIVE
+        numExecutors: 2
+        remoteFS: "/home/jenkins/workspace"
+        launcher:
+          ssh:
+            host: "test-node.company.com"
+            port: 22
+            credentialsId: "ssh-credentials"
+
+jobs:
+  - script: |
+      pipelineJob('API-Automation-Tests') {
+        displayName('REST Assured API Automation Tests')
+        description('Automated API testing pipeline using REST Assured framework')
+        
+        parameters {
+          choiceParam('ENVIRONMENT', ['dev', 'staging', 'prod'], 'Environment to test against')
+          choiceParam('TEST_SUITE', ['testng.xml', 'smoke-tests.xml', 'regression-tests.xml'], 'Test suite to execute')
+          stringParam('TEST_GROUPS', 'smoke,regression', 'TestNG groups to run')
+          booleanParam('GENERATE_ALLURE_REPORT', true, 'Generate Allure reports')
+        }
+        
+        properties {
+          pipelineTriggers {
+            triggers {
+              cron {
+                spec('0 2 * * *') // Daily at 2 AM
+              }
+            }
+          }
+        }
+        
+        definition {
+          cpsScm {
+            scm {
+              git {
+                remote {
+                  url('https://github.com/company/api-automation.git')
+                  credentials('git-credentials')
+                }
+                branches('*/main')
+                scriptPath('Jenkinsfile')
+              }
+            }
+          }
+        }
+      }
+
+  - script: |
+      multibranchPipelineJob('API-Automation-MultiBranch') {
+        displayName('API Automation - Multi Branch')
+        description('Multi-branch pipeline for API automation testing')
+        
+        branchSources {
+          git {
+            id('api-automation-git')
+            remote('https://github.com/company/api-automation.git')
+            credentialsId('git-credentials')
+            
+            traits {
+              gitBranchDiscovery()
+              gitTagDiscovery()
+              headWildcardFilter {
+                includes('main develop feature/* release/*')
+                excludes('experimental/*')
+              }
+            }
+          }
+        }
+        
+        factory {
+          workflowBranchProjectFactory {
+            scriptPath('Jenkinsfile')
+          }
+        }
+        
+        triggers {
+          periodicFolderTrigger {
+            interval('5m')
+          }
+        }
+      }
+
+  - script: |
+      pipelineJob('API-Smoke-Tests') {
+        displayName('API Smoke Tests - Quick Validation')
+        description('Quick smoke tests for API endpoints')
+        
+        parameters {
+          choiceParam('ENVIRONMENT', ['dev', 'staging'], 'Environment to test against')
+        }
+        
+        definition {
+          cps {
+            script('''
+              pipeline {
+                agent any
+                
+                environment {
+                  TEST_ENV = "${params.ENVIRONMENT}"
+                }
+                
+                stages {
+                  stage('Checkout') {
+                    steps {
+                      git branch: 'main', url: 'https://github.com/company/api-automation.git'
+                    }
+                  }
+                  
+                  stage('Smoke Tests') {
+                    steps {
+                      sh """
+                        mvn clean test \\
+                          -Denv=${TEST_ENV} \\
+                          -Dsuite=smoke-tests.xml \\
+                          -Dgroups=smoke \\
+                          -Dmaven.test.failure.ignore=true
+                      """
+                    }
+                  }
+                  
+                  stage('Results') {
+                    steps {
+                      publishHTML([
+                        allowMissing: false,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'target/surefire-reports',
+                        reportFiles: 'index.html',
+                        reportName: 'Smoke Test Report'
+                      ])
+                      
+                      junit 'target/surefire-reports/TEST-*.xml'
+                    }
+                  }
+                }
+                
+                post {
+                  always {
+                    archiveArtifacts artifacts: 'target/surefire-reports/**/*', allowEmptyArchive: true
+                  }
+                }
+              }
+            ''')
+          }
+        }
+      }
+
+tools:
+  git:
+    installations:
+      - name: "Default"
+        home: "/usr/bin/git"
+        
+  maven:
+    installations:
+      - name: "Maven-3.8.1"
+        home: "/opt/maven"
+        properties:
+          - installSource:
+              installers:
+                - maven:
+                    id: "3.8.1"
+                    
+  jdk:
+    installations:
+      - name: "JDK-11"
+        home: "/usr/lib/jvm/java-11-openjdk"
+        properties:
+          - installSource:
+              installers:
+                - adoptOpenJdkInstaller:
+                    id: "jdk-11.0.12+7"
+
+  allure:
+    installations:
+      - name: "Allure-2.20.1"
+        home: "/opt/allure"
+        properties:
+          - installSource:
+              installers:
+                - allureCommandlineInstaller:
+                    id: "2.20.1"
+
+credentials:
+  system:
+    domainCredentials:
+      - credentials:
+          - usernamePassword:
+              scope: GLOBAL
+              id: "git-credentials"
+              username: "git-user"
+              password: "git-token"
+              description: "Git repository credentials"
+              
+          - string:
+              scope: GLOBAL
+              id: "api-key-dev"
+              secret: "dev-api-key-secret"
+              description: "Development API Key"
+              
+          - string:
+              scope: GLOBAL
+              id: "api-key-staging"
+              secret: "staging-api-key-secret"
+              description: "Staging API Key"
+              
+          - string:
+              scope: GLOBAL
+              id: "api-key-prod"
+              secret: "prod-api-key-secret"
+              description: "Production API Key"
+              
+          - basicSSHUserPrivateKey:
+              scope: GLOBAL
+              id: "ssh-credentials"
+              username: "jenkins"
+              privateKeySource:
+                directEntry:
+                  privateKey: |
+                    -----BEGIN RSA PRIVATE KEY-----
+                    [SSH Private Key Content]
+                    -----END RSA PRIVATE KEY-----
+              description: "SSH credentials for build nodes"
+
+security:
+  queueItemAuthenticator:
+    authenticators:
+      - global:
+          strategy: "triggeringUsersAuthorizationStrategy"
+
+  gitHostKeyVerificationConfiguration:
+    sshHostKeyVerificationStrategy: "noHostKeyVerificationStrategy"
+
+unclassified:
+  location:
+    adminAddress: "admin@company.com"
+    url: "http://jenkins.company.com/"
+    
+  mailer:
+    smtpHost: "smtp.company.com"
+    smtpPort: 587
+    charset: "UTF-8"
+    authentication:
+      username: "jenkins@company.com"
+      password: "smtp-password"
+    useSsl: true
+    
+  allure:
+    commandline:
+      installations:
+        - name: "Allure-2.20.1"
+          home: "/opt/allure"
+          
+  extendedEmailPublisher:
+    defaultContentType: "text/html"
+    defaultSubject: "Build $BUILD_STATUS - $PROJECT_NAME - #$BUILD_NUMBER"
+    defaultBody: |
+      <h2>Build $BUILD_STATUS</h2>
+      <p><strong>Project:</strong> $PROJECT_NAME</p>
+      <p><strong>Build Number:</strong> $BUILD_NUMBER</p>
+      <p><strong>Duration:</strong> $BUILD_DURATION</p>
+      <p><strong>Console Output:</strong> <a href="$BUILD_URL/console">View Logs</a></p>
+      <p><strong>Test Results:</strong> <a href="$BUILD_URL/allure">View Allure Report</a></p>
+    smtpServer:
+      host: "smtp.company.com"
+      port: 587
+      username: "jenkins@company.com"
+      password: "smtp-password"
+      
+  globalLibraries:
+    libraries:
+      - name: "api-automation-shared"
+        defaultVersion: "main"
+        retriever:
+          modernSCM:
+            scm:
+              git:
+                remote: "https://github.com/company/jenkins-shared-library.git"
+                credentialsId: "git-credentials"
+
+  timestamper:
+    allPipelines: true
+    
+  buildTimestamp:
+    pattern: "yyyy-MM-dd HH:mm:ss"
+    timezone: "UTC"

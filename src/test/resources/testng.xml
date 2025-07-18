@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="API Automation Test Suite" verbose="1" parallel="methods" thread-count="3">
+    
+    <parameter name="environment" value="dev"/>
+    
+    <listeners>
+        <listener class-name="io.qameta.allure.testng.AllureTestNg"/>
+    </listeners>
+
+    <!-- Smoke Tests - Critical functionality -->
+    <test name="Smoke Tests" preserve-order="true">
+        <parameter name="test.type" value="smoke"/>
+        <groups>
+            <run>
+                <include name="smoke"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.api.automation.tests.UserAPITests">
+                <methods>
+                    <include name="testGetAllUsers"/>
+                    <include name="testCreateUser"/>
+                </methods>
+            </class>
+            <class name="com.api.automation.tests.AuthenticationTests">
+                <methods>
+                    <include name="testValidLogin"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+    <!-- Regression Tests - All functionality -->
+    <test name="Regression Tests" preserve-order="false">
+        <parameter name="test.type" value="regression"/>
+        <groups>
+            <run>
+                <include name="regression"/>
+                <include name="smoke"/>
+            </run>
+        </groups>
+        <packages>
+            <package name="com.api.automation.tests.*"/>
+        </packages>
+    </test>
+
+    <!-- User Management Tests -->
+    <test name="User Management Tests" preserve-order="true">
+        <parameter name="test.type" value="functional"/>
+        <groups>
+            <run>
+                <include name="user"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.api.automation.tests.UserAPITests"/>
+        </classes>
+    </test>
+
+    <!-- Authentication Tests -->
+    <test name="Authentication Tests" preserve-order="false">
+        <parameter name="test.type" value="security"/>
+        <groups>
+            <run>
+                <include name="auth"/>
+                <include name="security"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.api.automation.tests.AuthenticationTests"/>
+        </classes>
+    </test>
+
+    <!-- Performance Tests -->
+    <test name="Performance Tests" preserve-order="false">
+        <parameter name="test.type" value="performance"/>
+        <groups>
+            <run>
+                <include name="performance"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.api.automation.tests.PerformanceTests"/>
+        </classes>
+    </test>
+
+    <!-- Negative Tests -->
+    <test name="Negative Tests" preserve-order="false">
+        <parameter name="test.type" value="negative"/>
+        <groups>
+            <run>
+                <include name="negative"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.api.automation.tests.UserAPITests">
+                <methods>
+                    <include name="testCreateUserWithInvalidData"/>
+                    <include name="testGetNonExistentUser"/>
+                </methods>
+            </class>
+            <class name="com.api.automation.tests.AuthenticationTests">
+                <methods>
+                    <include name="testInvalidLogin"/>
+                    <include name="testUnauthorizedAccess"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>

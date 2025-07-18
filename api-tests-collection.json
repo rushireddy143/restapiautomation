@@ -1,0 +1,260 @@
+{
+  "info": {
+    "name": "API Tests Collection",
+    "description": "Converted from Java RestAssured tests - CRUD operations for user management",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "version": "1.0.0"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://reqres.in",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "reqres-free-v1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Get Users",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('Response has data array with users', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.data).to.be.an('array');",
+              "    pm.expect(responseJson.data.length).to.be.greaterThan(0);",
+              "});",
+              "",
+              "pm.test('First user has valid ID', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.data[0].id).to.not.be.null;",
+              "    pm.expect(responseJson.data[0].id).to.not.be.undefined;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/users?page=2",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "users"],
+          "query": [
+            {
+              "key": "page",
+              "value": "2"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Create User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 201', function () {",
+              "    pm.response.to.have.status(201);",
+              "});",
+              "",
+              "pm.test('User created with correct name', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.name).to.eql('Rushi');",
+              "});",
+              "",
+              "pm.test('User created with correct job', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.job).to.eql('QA Engineer');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Rushi\",\n  \"job\": \"QA Engineer\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/users",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "users"]
+        }
+      }
+    },
+    {
+      "name": "Update User (PUT)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('User updated with correct name', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.name).to.eql('Rushi');",
+              "});",
+              "",
+              "pm.test('User updated with correct job', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.job).to.eql('Senior QA Engineer');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"Rushi\",\n  \"job\": \"Senior QA Engineer\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/users/2",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "users", "2"]
+        }
+      }
+    },
+    {
+      "name": "Update User (PATCH)",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 200', function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "",
+              "pm.test('User job updated correctly', function () {",
+              "    const responseJson = pm.response.json();",
+              "    pm.expect(responseJson.job).to.eql('Lead QA Engineer');",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"job\": \"Lead QA Engineer\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/users/2",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "users", "2"]
+        }
+      }
+    },
+    {
+      "name": "Delete User",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test('Status code is 204', function () {",
+              "    pm.response.to.have.status(204);",
+              "});",
+              "",
+              "pm.test('Response body is empty', function () {",
+              "    pm.expect(pm.response.text()).to.be.empty;",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "DELETE",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/users/2",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "users", "2"]
+        }
+      }
+    }
+  ]
+}

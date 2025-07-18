@@ -1,0 +1,198 @@
+version: '3.8'
+
+services:
+  jenkins:
+    image: jenkins/jenkins:lts-jdk11
+    container_name: jenkins-api-automation
+    restart: unless-stopped
+    
+    ports:
+      - "8080:8080"     # Jenkins Web UI
+      - "50000:50000"   # Jenkins Agent Port
+    
+    volumes:
+      # Jenkins home directory
+      - jenkins_home:/var/jenkins_home
+      
+      # Mount Jenkins configuration
+      - ./jenkins.yaml:/var/jenkins_home/casc_configs/jenkins.yaml:ro
+      
+      # Mount Docker socket for Docker-in-Docker
+      - /var/run/docker.sock:/var/run/docker.sock
+      
+      # Mount workspace for builds
+      - jenkins_workspace:/var/jenkins_home/workspace
+      
+      # Mount logs directory
+      - ./logs:/var/jenkins_home/logs
+    
+    environment:
+      # Java options
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false -Xmx2048m
+      
+      # Jenkins Configuration as Code
+      - CASC_JENKINS_CONFIG=/var/jenkins_home/casc_configs/jenkins.yaml
+      
+      # Plugin installation
+      - JENKINS_OPTS=--httpPort=8080
+      
+      # Admin user
+      - JENKINS_ADMIN_ID=admin
+      - JENKINS_ADMIN_PASSWORD=admin123
+    
+    # Install required plugins
+    user: root
+    command: >
+      bash -c "
+        # Install Docker CLI
+        apt-get update && 
+        apt-get install -y docker.io curl &&
+        
+        # Install Maven
+        cd /opt &&
+        curl -O https://archive.apache.org/dist/maven/maven-3/3.8.1/binaries/apache-maven-3.8.1-bin.tar.gz &&
+        tar -xzf apache-maven-3.8.1-bin.tar.gz &&
+        mv apache-maven-3.8.1 maven &&
+        ln -s /opt/maven/bin/mvn /usr/local/bin/mvn &&
+        
+        # Install Allure
+        curl -o allure-2.20.1.tgz -L https://github.com/allure-framework/allure2/releases/download/2.20.1/allure-2.20.1.tgz &&
+        tar -xzf allure-2.20.1.tgz &&
+        mv allure-2.20.1 /opt/allure &&
+        ln -s /opt/allure/bin/allure /usr/local/bin/allure &&
+        
+        # Set permissions
+        chown -R jenkins:jenkins /var/jenkins_home &&
+        
+        # Start Jenkins
+        /usr/local/bin/jenkins.sh
+      "
+    
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/login || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # Jenkins Agent for running tests
+  jenkins-agent:
+    image: jenkins/inbound-agent:latest-jdk11
+    container_name: jenkins-agent-api-tests
+    restart: unless-stopped
+    
+    depends_on:
+      - jenkins
+    
+    environment:
+      - JENKINS_URL=http://jenkins:8080
+      - JENKINS_AGENT_NAME=api-test-agent
+      - JENKINS_SECRET=${JENKINS_AGENT_SECRET:-secret}
+      - JENKINS_AGENT_WORKDIR=/home/jenkins/workspace
+    
+    volumes:
+      - jenkins_agent_workspace:/home/jenkins/workspace
+      - /var/run/docker.sock:/var/run/docker.sock
+    
+    user: root
+    command: >
+      bash -c "
+        # Install required tools
+        apt-get update &&
+        apt-get install -y maven openjdk-11-jdk curl git docker.io &&
+        
+        # Set JAVA_HOME
+        export JAVA_HOME=/usr/lib/jvm/java-11-openjdk-amd64 &&
+        
+        # Install Allure
+        curl -o allure-2.20.1.tgz -L https://github.com/allure-framework/allure2/releases/download/2.20.1/allure-2.20.1.tgz &&
+        tar -xzf allure-2.20.1.tgz &&
+        mv allure-2.20.1 /opt/allure &&
+        ln -s /opt/allure/bin/allure /usr/local/bin/allure &&
+        
+        # Set permissions
+        usermod -aG docker jenkins &&
+        chown -R jenkins:jenkins /home/jenkins &&
+        
+        # Start agent
+        java -jar /usr/share/jenkins/agent.jar -jnlpUrl http://jenkins:8080/computer/api-test-agent/slave-agent.jnlp -secret ${JENKINS_SECRET} -workDir /home/jenkins/workspace
+      "
+
+  # Optional: Allure Report Server
+  allure-server:
+    image: frankescobar/allure-docker-service
+    container_name: allure-report-server
+    restart: unless-stopped
+    
+    ports:
+      - "5050:5050"
+    
+    volumes:
+      - allure_results:/app/allure-results
+      - allure_reports:/app/default-reports
+    
+    environment:
+      - CHECK_RESULTS_EVERY_SECONDS=3
+      - KEEP_HISTORY=TRUE
+      - KEEP_HISTORY_LATEST=25
+
+  # Optional: SonarQube for code quality
+  sonarqube:
+    image: sonarqube:community
+    container_name: sonarqube-api-automation
+    restart: unless-stopped
+    
+    ports:
+      - "9000:9000"
+    
+    volumes:
+      - sonarqube_data:/opt/sonarqube/data
+      - sonarqube_logs:/opt/sonarqube/logs
+      - sonarqube_extensions:/opt/sonarqube/extensions
+    
+    environment:
+      - SONAR_JDBC_URL=jdbc:postgresql://postgres:5432/sonar
+      - SONAR_JDBC_USERNAME=sonar
+      - SONAR_JDBC_PASSWORD=sonar
+    
+    depends_on:
+      - postgres
+
+  # PostgreSQL for SonarQube
+  postgres:
+    image: postgres:13
+    container_name: postgres-sonar
+    restart: unless-stopped
+    
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    
+    environment:
+      - POSTGRES_USER=sonar
+      - POSTGRES_PASSWORD=sonar
+      - POSTGRES_DB=sonar
+
+volumes:
+  jenkins_home:
+    driver: local
+  jenkins_workspace:
+    driver: local
+  jenkins_agent_workspace:
+    driver: local
+  allure_results:
+    driver: local
+  allure_reports:
+    driver: local
+  sonarqube_data:
+    driver: local
+  sonarqube_logs:
+    driver: local
+  sonarqube_extensions:
+    driver: local
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    name: jenkins-api-automation
+    driver: bridge

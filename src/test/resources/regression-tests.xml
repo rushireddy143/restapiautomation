@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="Regression Test Suite" verbose="1" parallel="methods" thread-count="5">
+    
+    <parameter name="environment" value="staging"/>
+    
+    <listeners>
+        <listener class-name="io.qameta.allure.testng.AllureTestNg"/>
+    </listeners>
+
+    <test name="Full Regression Tests" preserve-order="false">
+        <groups>
+            <run>
+                <include name="regression"/>
+                <include name="smoke"/>
+            </run>
+        </groups>
+        <packages>
+            <package name="com.api.automation.tests.*"/>
+        </packages>
+    </test>
+
+</suite>

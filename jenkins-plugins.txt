@@ -1,0 +1,121 @@
+# Jenkins Plugins for API Automation Pipeline
+
+# Core plugins
+ant:latest
+build-timeout:latest
+credentials-binding:latest
+timestamper:latest
+ws-cleanup:latest
+
+# Pipeline plugins
+workflow-aggregator:latest
+workflow-job:latest
+workflow-cps:latest
+workflow-durable-task-step:latest
+workflow-scm-step:latest
+workflow-support:latest
+pipeline-stage-view:latest
+pipeline-rest-api:latest
+pipeline-utility-steps:latest
+
+# SCM plugins
+git:latest
+github:latest
+github-branch-source:latest
+bitbucket:latest
+gitlab-plugin:latest
+
+# Build tools
+maven-plugin:latest
+gradle:latest
+
+# Testing plugins
+junit:latest
+testng-plugin:latest
+allure-jenkins-plugin:latest
+html-publisher:latest
+performance:latest
+jacoco:latest
+
+# Notification plugins
+email-ext:latest
+slack:latest
+mailer:latest
+
+# Reporting plugins
+publish-over-ssh:latest
+build-name-setter:latest
+description-setter:latest
+envinject:latest
+
+# Security plugins
+matrix-auth:latest
+role-strategy:latest
+ssh-credentials:latest
+credentials:latest
+plain-credentials:latest
+
+# Configuration as Code
+configuration-as-code:latest
+configuration-as-code-support:latest
+
+# Docker support
+docker-workflow:latest
+docker-commons:latest
+docker-build-step:latest
+
+# Monitoring
+monitoring:latest
+metrics:latest
+prometheus:latest
+
+# Utility plugins
+ansicolor:latest
+build-user-vars-plugin:latest
+conditional-buildstep:latest
+copyartifact:latest
+dashboard-view:latest
+embeddable-build-status:latest
+parameterized-trigger:latest
+rebuild:latest
+ssh-agent:latest
+flexible-publish:latest
+
+# Quality gates
+sonar:latest
+warnings-ng:latest
+checkstyle:latest
+pmd:latest
+findbugs:latest
+
+# Parallel execution
+parallel-test-executor:latest
+build-flow-plugin:latest
+
+# Node management
+ssh-slaves:latest
+node-iterator-api:latest
+
+# API testing specific
+http-request:latest
+rest-assured:latest
+cucumber-reports:latest
+
+# Multibranch support
+multibranch-scan-webhook-trigger:latest
+basic-branch-build-strategies:latest
+
+# Blue Ocean (Modern UI)
+blueocean:latest
+blueocean-pipeline-api-impl:latest
+blueocean-pipeline-editor:latest
+blueocean-rest:latest
+blueocean-dashboard:latest
+
+# Additional utility
+favorite:latest
+handlebars:latest
+momentjs:latest
+pipeline-github-lib:latest
+pipeline-maven:latest
+pipeline-npm:latest

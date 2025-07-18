@@ -1,0 +1,567 @@
+pipeline {
+    agent any
+
+    tools {
+        maven "Maven-3.8.1"
+        jdk "JDK-11"
+        nodejs "NodeJS-18"
+    }
+
+    environment {
+        // Test Configuration
+        TEST_ENV = "${params.ENVIRONMENT ?: 'dev'}"
+        TEST_SUITE = "${params.TEST_SUITE ?: 'testng.xml'}"
+        PARALLEL_THREADS = "${params.PARALLEL_THREADS ?: '3'}"
+        
+        // Postman Configuration
+        POSTMAN_API_KEY = credentials('postman-api-key')
+        COLLECTION_ID = '46489438-936dba4f-e48a-4492-b851-3fde7b2ee77f'
+        ENVIRONMENT_ID = '46489438-c7cd65fd-f160-474a-9aa3-22f8c4ef0521'
+        
+        // Docker Configuration
+        DOCKER_REGISTRY = 'your-registry.com'
+        DOCKER_IMAGE = 'api-automation-tests'
+        
+        // Notification Configuration
+        SLACK_CHANNEL = '#api-automation'
+        EMAIL_RECIPIENTS = 'team@company.com'
+        
+        // Security Scanning
+        SONAR_PROJECT_KEY = 'api-automation-framework'
+        
+        // Performance Thresholds
+        MAX_RESPONSE_TIME = '5000'
+        MIN_THROUGHPUT = '10'
+    }
+
+    parameters {
+        choice(
+            name: 'ENVIRONMENT',
+            choices: ['dev', 'staging', 'prod'],
+            description: 'Environment to run tests against'
+        )
+        choice(
+            name: 'TEST_SUITE',
+            choices: ['testng.xml', 'smoke-tests.xml', 'regression-tests.xml', 'performance-tests.xml', 'security-tests.xml'],
+            description: 'Test suite to execute'
+        )
+        choice(
+            name: 'EXECUTION_MODE',
+            choices: ['maven', 'postman', 'cucumber', 'all'],
+            description: 'Test execution mode'
+        )
+        choice(
+            name: 'PARALLEL_THREADS',
+            choices: ['1', '3', '5', '10'],
+            description: 'Number of parallel threads'
+        )
+        booleanParam(
+            name: 'RUN_PERFORMANCE_TESTS',
+            defaultValue: false,
+            description: 'Run performance tests'
+        )
+        booleanParam(
+            name: 'RUN_SECURITY_TESTS',
+            defaultValue: false,
+            description: 'Run security tests'
+        )
+        booleanParam(
+            name: 'RUN_CONTRACT_TESTS',
+            defaultValue: false,
+            description: 'Run contract tests'
+        )
+        booleanParam(
+            name: 'GENERATE_ANALYTICS',
+            defaultValue: true,
+            description: 'Generate test analytics dashboard'
+        )
+        booleanParam(
+            name: 'DEPLOY_TO_DOCKER',
+            defaultValue: false,
+            description: 'Build and deploy Docker image'
+        )
+        string(
+            name: 'CUSTOM_TAGS',
+            defaultValue: '@smoke,@regression',
+            description: 'Custom test tags for execution'
+        )
+    }
+
+    options {
+        buildDiscarder(logRotator(numToKeepStr: '50'))
+        timeout(time: 3, unit: 'HOURS')
+        retry(1)
+        skipStagesAfterUnstable()
+        ansiColor('xterm')
+        timestamps()
+    }
+
+    stages {
+        stage('Checkout & Setup') {
+            parallel {
+                stage('Source Checkout') {
+                    steps {
+                        script {
+                            echo "🔄 Checking out source code..."
+                            checkout scm
+                            
+                            currentBuild.displayName = "#${BUILD_NUMBER} - ${TEST_ENV} - ${params.EXECUTION_MODE}"
+                            currentBuild.description = "Environment: ${TEST_ENV}, Mode: ${params.EXECUTION_MODE}, Suite: ${TEST_SUITE}"
+                        }
+                    }
+                }
+                
+                stage('Environment Validation') {
+                    steps {
+                        script {
+                            echo "🔍 Validating environment configuration..."
+                            
+                            sh '''
+                                echo "Java Version:"
+                                java -version
+                                echo "Maven Version:"
+                                mvn -version
+                                echo "Node.js Version:"
+                                node --version
+                                echo "Environment: ${TEST_ENV}"
+                                echo "Execution Mode: ${EXECUTION_MODE}"
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Dependency Management') {
+            parallel {
+                stage('Maven Dependencies') {
+                    when {
+                        anyOf {
+                            params.EXECUTION_MODE == 'maven'
+                            params.EXECUTION_MODE == 'cucumber'
+                            params.EXECUTION_MODE == 'all'
+                        }
+                    }
+                    steps {
+                        script {
+                            echo "📦 Installing Maven dependencies..."
+                            sh '''
+                                mvn clean dependency:resolve -B
+                                mvn dependency:tree > target/dependency-tree.txt
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Node.js Dependencies') {
+                    when {
+                        anyOf {
+                            params.EXECUTION_MODE == 'postman'
+                            params.EXECUTION_MODE == 'all'
+                        }
+                    }
+                    steps {
+                        script {
+                            echo "📦 Installing Node.js dependencies..."
+                            sh '''
+                                npm install -g newman
+                                npm install -g newman-reporter-html
+                                npm install -g newman-reporter-htmlextra
+                                curl -o- "https://dl-cli.pstmn.io/install/linux64.sh" | sh
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Code Quality & Security') {
+            parallel {
+                stage('Compile & Validate') {
+                    when {
+                        anyOf {
+                            params.EXECUTION_MODE == 'maven'
+                            params.EXECUTION_MODE == 'cucumber'
+                            params.EXECUTION_MODE == 'all'
+                        }
+                    }
+                    steps {
+                        script {
+                            echo "🔨 Compiling source code..."
+                            sh 'mvn clean compile test-compile -B'
+                        }
+                    }
+                }
+                
+                stage('SonarQube Analysis') {
+                    when {
+                        environment name: 'TEST_ENV', value: 'staging'
+                    }
+                    steps {
+                        script {
+                            echo "🔍 Running SonarQube analysis..."
+                            withSonarQubeEnv('SonarQube') {
+                                sh '''
+                                    mvn sonar:sonar \\
+                                        -Dsonar.projectKey=${SONAR_PROJECT_KEY} \\
+                                        -Dsonar.sources=src/main \\
+                                        -Dsonar.tests=src/test \\
+                                        -Dsonar.java.binaries=target/classes
+                                '''
+                            }
+                        }
+                    }
+                }
+                
+                stage('Security Scan') {
+                    steps {
+                        script {
+                            echo "🔒 Running security scan..."
+                            sh '''
+                                # OWASP Dependency Check
+                                mvn org.owasp:dependency-check-maven:check || true
+                                
+                                # Bandit for Python (if any Python scripts)
+                                # bandit -r . -f json -o target/bandit-report.json || true
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Test Execution') {
+            parallel {
+                stage('Maven Tests') {
+                    when {
+                        anyOf {
+                            params.EXECUTION_MODE == 'maven'
+                            params.EXECUTION_MODE == 'all'
+                        }
+                    }
+                    steps {
+                        script {
+                            echo "🧪 Running Maven-based tests..."
+                            sh '''
+                                mvn clean test \\
+                                    -Denv=${TEST_ENV} \\
+                                    -Dsuite=${TEST_SUITE} \\
+                                    -DthreadCount=${PARALLEL_THREADS} \\
+                                    -Dmaven.test.failure.ignore=true \\
+                                    -B
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Cucumber BDD Tests') {
+                    when {
+                        anyOf {
+                            params.EXECUTION_MODE == 'cucumber'
+                            params.EXECUTION_MODE == 'all'
+                        }
+                    }
+                    steps {
+                        script {
+                            echo "🥒 Running Cucumber BDD tests..."
+                            sh '''
+                                mvn test \\
+                                    -Dtest=CucumberTestRunner \\
+                                    -Dcucumber.filter.tags="${CUSTOM_TAGS}" \\
+                                    -Denv=${TEST_ENV} \\
+                                    -Dmaven.test.failure.ignore=true \\
+                                    -B
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Postman Tests') {
+                    when {
+                        anyOf {
+                            params.EXECUTION_MODE == 'postman'
+                            params.EXECUTION_MODE == 'all'
+                        }
+                    }
+                    steps {
+                        script {
+                            echo "📮 Running Postman tests..."
+                            sh '''
+                                export PATH="$HOME/.postman-cli/bin:$PATH"
+                                
+                                # Postman CLI execution
+                                postman login --with-api-key $POSTMAN_API_KEY
+                                postman collection run "${COLLECTION_ID}" -e "${ENVIRONMENT_ID}" \\
+                                    --reporter-cli \\
+                                    --output-file "target/postman-results.json" || true
+                                
+                                # Newman execution for better reporting
+                                newman run "https://api.getpostman.com/collections/${COLLECTION_ID}?apikey=${POSTMAN_API_KEY}" \\
+                                    --environment "https://api.getpostman.com/environments/${ENVIRONMENT_ID}?apikey=${POSTMAN_API_KEY}" \\
+                                    --reporters cli,json,htmlextra \\
+                                    --reporter-json-export "target/newman-report.json" \\
+                                    --reporter-htmlextra-export "target/newman-report.html" \\
+                                    --timeout-request 30000 || true
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Specialized Testing') {
+            parallel {
+                stage('Performance Tests') {
+                    when {
+                        params.RUN_PERFORMANCE_TESTS
+                    }
+                    steps {
+                        script {
+                            echo "⚡ Running performance tests..."
+                            sh '''
+                                mvn test \\
+                                    -Dtest=PerformanceTestSuite \\
+                                    -Denv=${TEST_ENV} \\
+                                    -DmaxResponseTime=${MAX_RESPONSE_TIME} \\
+                                    -DminThroughput=${MIN_THROUGHPUT} \\
+                                    -Dmaven.test.failure.ignore=true \\
+                                    -B
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Security Tests') {
+                    when {
+                        params.RUN_SECURITY_TESTS
+                    }
+                    steps {
+                        script {
+                            echo "🔒 Running security tests..."
+                            sh '''
+                                mvn test \\
+                                    -Dtest=SecurityTestSuite \\
+                                    -Denv=${TEST_ENV} \\
+                                    -Dmaven.test.failure.ignore=true \\
+                                    -B
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Contract Tests') {
+                    when {
+                        params.RUN_CONTRACT_TESTS
+                    }
+                    steps {
+                        script {
+                            echo "📋 Running contract tests..."
+                            sh '''
+                                mvn test \\
+                                    -Dtest=UserApiContractTest \\
+                                    -Denv=${TEST_ENV} \\
+                                    -Dmaven.test.failure.ignore=true \\
+                                    -B
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Results Analysis & Reporting') {
+            parallel {
+                stage('Test Analytics') {
+                    when {
+                        params.GENERATE_ANALYTICS
+                    }
+                    steps {
+                        script {
+                            echo "📊 Generating test analytics..."
+                            sh '''
+                                # Generate analytics dashboard
+                                mvn exec:java \\
+                                    -Dexec.mainClass="com.api.automation.reporting.TestAnalytics" \\
+                                    -Dexec.args="target/analytics-dashboard.html" || true
+                            '''
+                        }
+                    }
+                }
+                
+                stage('Quality Gates') {
+                    steps {
+                        script {
+                            echo "🎯 Checking quality gates..."
+                            
+                            def testResults = sh(
+                                script: 'find target -name "TEST-*.xml" -exec grep -l "failures=\\"[1-9]" {} \\; | wc -l',
+                                returnStdout: true
+                            ).trim()
+                            
+                            if (testResults.toInteger() > 0) {
+                                echo "⚠️ Some tests failed, marking build as unstable"
+                                currentBuild.result = 'UNSTABLE'
+                            }
+                            
+                            // Performance quality gates
+                            if (params.RUN_PERFORMANCE_TESTS) {
+                                sh '''
+                                    # Check performance thresholds
+                                    if grep -q "Response time.*exceeded" target/surefire-reports/*.txt 2>/dev/null; then
+                                        echo "⚠️ Performance thresholds exceeded"
+                                    fi
+                                '''
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('Docker & Deployment') {
+            when {
+                params.DEPLOY_TO_DOCKER
+            }
+            steps {
+                script {
+                    echo "🐳 Building and deploying Docker image..."
+                    sh '''
+                        # Build Docker image
+                        docker build -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${BUILD_NUMBER} .
+                        docker build -t ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest .
+                        
+                        # Push to registry
+                        docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${BUILD_NUMBER}
+                        docker push ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest
+                        
+                        # Clean up local images
+                        docker rmi ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:${BUILD_NUMBER} || true
+                        docker rmi ${DOCKER_REGISTRY}/${DOCKER_IMAGE}:latest || true
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        always {
+            script {
+                echo "📤 Publishing test results and reports..."
+                
+                // Publish test results
+                publishTestResults testResultsPattern: 'target/surefire-reports/TEST-*.xml'
+                
+                // Publish HTML reports
+                publishHTML([
+                    allowMissing: false,
+                    alwaysLinkToLastBuild: true,
+                    keepAll: true,
+                    reportDir: 'target/surefire-reports',
+                    reportFiles: 'index.html',
+                    reportName: 'TestNG Report'
+                ])
+                
+                // Publish Allure results
+                allure([
+                    includeProperties: false,
+                    jdk: '',
+                    properties: [],
+                    reportBuildPolicy: 'ALWAYS',
+                    results: [[path: 'target/allure-results']]
+                ])
+                
+                // Publish Newman reports
+                if (params.EXECUTION_MODE == 'postman' || params.EXECUTION_MODE == 'all') {
+                    publishHTML([
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'target',
+                        reportFiles: 'newman-report.html',
+                        reportName: 'Newman Report'
+                    ])
+                }
+                
+                // Publish analytics dashboard
+                if (params.GENERATE_ANALYTICS) {
+                    publishHTML([
+                        allowMissing: true,
+                        alwaysLinkToLastBuild: true,
+                        keepAll: true,
+                        reportDir: 'target',
+                        reportFiles: 'analytics-dashboard.html',
+                        reportName: 'Test Analytics Dashboard'
+                    ])
+                }
+                
+                // Archive artifacts
+                archiveArtifacts artifacts: '''
+                    target/surefire-reports/**/*,
+                    target/allure-results/**/*,
+                    target/cucumber-reports/**/*,
+                    target/*.html,
+                    target/*.json,
+                    logs/*.log
+                ''', allowEmptyArchive: true
+            }
+        }
+        
+        success {
+            script {
+                echo "✅ All tests passed successfully!"
+                
+                emailext (
+                    to: "${EMAIL_RECIPIENTS}",
+                    subject: "✅ API Tests PASSED - ${TEST_ENV} - Build #${BUILD_NUMBER}",
+                    body: """
+                        <h2>API Test Execution Successful</h2>
+                        <p><strong>Environment:</strong> ${TEST_ENV}</p>
+                        <p><strong>Execution Mode:</strong> ${params.EXECUTION_MODE}</p>
+                        <p><strong>Test Suite:</strong> ${TEST_SUITE}</p>
+                        <p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>
+                        <p><strong>Duration:</strong> ${currentBuild.durationString}</p>
+                        <p><strong>View Reports:</strong></p>
+                        <ul>
+                            <li><a href="${BUILD_URL}allure/">Allure Report</a></li>
+                            <li><a href="${BUILD_URL}TestNG_Report/">TestNG Report</a></li>
+                            <li><a href="${BUILD_URL}Test_Analytics_Dashboard/">Analytics Dashboard</a></li>
+                        </ul>
+                        
+                        <p>All API tests executed successfully!</p>
+                    """,
+                    mimeType: 'text/html'
+                )
+            }
+        }
+        
+        failure {
+            script {
+                echo "❌ Pipeline failed!"
+                
+                emailext (
+                    to: "${EMAIL_RECIPIENTS}",
+                    subject: "❌ API Tests FAILED - ${TEST_ENV} - Build #${BUILD_NUMBER}",
+                    body: """
+                        <h2>API Test Execution Failed</h2>
+                        <p><strong>Environment:</strong> ${TEST_ENV}</p>
+                        <p><strong>Execution Mode:</strong> ${params.EXECUTION_MODE}</p>
+                        <p><strong>Test Suite:</strong> ${TEST_SUITE}</p>
+                        <p><strong>Build Number:</strong> ${BUILD_NUMBER}</p>
+                        <p><strong>Duration:</strong> ${currentBuild.durationString}</p>
+                        <p><strong>View Logs:</strong> <a href="${BUILD_URL}console">Console Output</a></p>
+                        
+                        <p style="color: red;">Please check the logs and fix the failing tests.</p>
+                    """,
+                    mimeType: 'text/html'
+                )
+            }
+        }
+        
+        cleanup {
+            script {
+                echo "🧹 Cleaning up workspace..."
+                cleanWs()
+            }
+        }
+    }
+}

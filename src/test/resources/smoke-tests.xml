@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+<suite name="Smoke Test Suite" verbose="1">
+    
+    <parameter name="environment" value="dev"/>
+    
+    <listeners>
+        <listener class-name="io.qameta.allure.testng.AllureTestNg"/>
+    </listeners>
+
+    <test name="Critical Smoke Tests" preserve-order="true">
+        <groups>
+            <run>
+                <include name="smoke"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.api.automation.tests.UserAPITests">
+                <methods>
+                    <include name="testGetAllUsers"/>
+                    <include name="testCreateUser"/>
+                </methods>
+            </class>
+            <class name="com.api.automation.tests.AuthenticationTests">
+                <methods>
+                    <include name="testValidLogin"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+
+</suite>
