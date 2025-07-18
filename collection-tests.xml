@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "http://testng.org/testng-1.0.dtd">
+
+<suite name="Complete Collection Automation Suite" verbose="1" parallel="methods" thread-count="3">
+    
+    <parameter name="env" value="dev"/>
+    <parameter name="baseUrl" value="https://reqres.in"/>
+    <parameter name="apiKey" value="reqres-free-v1"/>
+    
+    <listeners>
+        <listener class-name="io.qameta.allure.testng.AllureTestNg"/>
+        <listener class-name="com.api.automation.listeners.TestListener"/>
+        <listener class-name="com.api.automation.listeners.RetryListener"/>
+    </listeners>
+    
+    <!-- Smoke Tests for Collection -->
+    <test name="Collection Smoke Tests" preserve-order="true">
+        <parameter name="testType" value="smoke"/>
+        <groups>
+            <run>
+                <include name="smoke"/>
+                <include name="collection"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.api.automation.tests.CompleteCollectionTests">
+                <methods>
+                    <include name="testGetUsersFromCollection"/>
+                    <include name="testCreateUserFromCollection"/>
+                    <include name="testDeleteUserFromCollection"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+    
+    <!-- Regression Tests for All Collection Endpoints -->
+    <test name="Collection Regression Tests" preserve-order="true">
+        <parameter name="testType" value="regression"/>
+        <groups>
+            <run>
+                <include name="regression"/>
+                <include name="collection"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.api.automation.tests.CompleteCollectionTests">
+                <methods>
+                    <include name="testGetUsersFromCollection"/>
+                    <include name="testCreateUserFromCollection"/>
+                    <include name="testUpdateUserPutFromCollection"/>
+                    <include name="testUpdateUserPatchFromCollection"/>
+                    <include name="testDeleteUserFromCollection"/>
+                    <include name="testCompleteCollectionWorkflow"/>
+                    <include name="testCollectionWithMultipleDataSets"/>
+                </methods>
+            </class>
+        </classes>
+    </test>
+    
+    <!-- Enhanced Framework Tests -->
+    <test name="Enhanced Framework Tests" preserve-order="false">
+        <parameter name="testType" value="enhanced"/>
+        <groups>
+            <run>
+                <include name="enhanced"/>
+                <include name="regression"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.api.automation.tests.EnhancedUserAPITests"/>
+        </classes>
+    </test>
+    
+    <!-- Performance Tests -->
+    <test name="Performance Tests" preserve-order="false">
+        <parameter name="testType" value="performance"/>
+        <groups>
+            <run>
+                <include name="performance"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.api.automation.performance.PerformanceTestSuite"/>
+        </classes>
+    </test>
+    
+    <!-- Security Tests -->
+    <test name="Security Tests" preserve-order="false">
+        <parameter name="testType" value="security"/>
+        <groups>
+            <run>
+                <include name="security"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.api.automation.security.SecurityTestSuite"/>
+        </classes>
+    </test>
+    
+    <!-- Contract Tests -->
+    <test name="Contract Tests" preserve-order="false">
+        <parameter name="testType" value="contract"/>
+        <groups>
+            <run>
+                <include name="contract"/>
+            </run>
+        </groups>
+        <classes>
+            <class name="com.api.automation.contract.UserApiContractTest"/>
+        </classes>
+    </test>
+    
+</suite>

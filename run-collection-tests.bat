@@ -1,0 +1,86 @@
+@echo off
+echo ========================================
+echo   POSTMAN COLLECTION AUTOMATION SUITE
+echo ========================================
+echo.
+
+set ENV=%1
+if "%ENV%"=="" set ENV=dev
+
+echo Environment: %ENV%
+echo.
+
+echo ========================================
+echo   1. COLLECTION SMOKE TESTS
+echo ========================================
+echo Running smoke tests for all collection endpoints...
+mvn clean test -Dtest=CompleteCollectionTests#testGetUsersFromCollection,testCreateUserFromCollection,testDeleteUserFromCollection -Denv=%ENV% -Dgroups=smoke,collection
+
+echo.
+echo ========================================
+echo   2. COMPLETE COLLECTION REGRESSION
+echo ========================================
+echo Running all collection endpoints with full validation...
+mvn clean test -Dtest=CompleteCollectionTests -Denv=%ENV% -Dgroups=regression,collection
+
+echo.
+echo ========================================
+echo   3. BDD COLLECTION SCENARIOS
+echo ========================================
+echo Running Cucumber BDD scenarios for collection...
+mvn test -Dtest=CollectionTestRunner -Denv=%ENV%
+
+echo.
+echo ========================================
+echo   4. COLLECTION WORKFLOW TESTS
+echo ========================================
+echo Running end-to-end workflow tests...
+mvn test -Dtest=CollectionWorkflowTestRunner -Denv=%ENV%
+
+echo.
+echo ========================================
+echo   5. ENHANCED FRAMEWORK TESTS
+echo ========================================
+echo Running enhanced framework pattern tests...
+mvn test -Dtest=EnhancedUserAPITests -Denv=%ENV% -Dgroups=enhanced
+
+echo.
+echo ========================================
+echo   6. PERFORMANCE TESTS (Optional)
+echo ========================================
+set /p runPerf="Run performance tests? (y/n): "
+if /i "%runPerf%"=="y" (
+    echo Running performance tests...
+    mvn test -Dtest=PerformanceTestSuite -Denv=%ENV% -Dgroups=performance
+)
+
+echo.
+echo ========================================
+echo   7. SECURITY TESTS (Optional)
+echo ========================================
+set /p runSec="Run security tests? (y/n): "
+if /i "%runSec%"=="y" (
+    echo Running security tests...
+    mvn test -Dtest=SecurityTestSuite -Denv=%ENV% -Dgroups=security
+)
+
+echo.
+echo ========================================
+echo   8. GENERATING REPORTS
+echo ========================================
+echo Generating Allure reports...
+allure generate target/allure-results --clean -o target/allure-reports
+
+echo.
+echo ========================================
+echo   COLLECTION AUTOMATION COMPLETED
+echo ========================================
+echo.
+echo Reports generated:
+echo - TestNG Reports: target/surefire-reports/index.html
+echo - Allure Reports: target/allure-reports/index.html
+echo - Cucumber Reports: target/cucumber-reports/
+echo.
+echo To view Allure reports: allure open target/allure-reports
+echo.
+pause

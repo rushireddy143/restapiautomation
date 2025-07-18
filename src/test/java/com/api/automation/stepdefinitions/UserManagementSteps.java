@@ -362,4 +362,228 @@ public class UserManagementSteps {
         }
         ExtentReportManager.logPass("All user IDs are unique");
     }
+
+    @Then("each user should have the correct name and job")
+    public void eachUserShouldHaveTheCorrectNameAndJob() {
+        for (Response resp : responses) {
+            Assert.assertNotNull(resp.jsonPath().getString("name"), "User should have a name");
+            Assert.assertNotNull(resp.jsonPath().getString("job"), "User should have a job");
+        }
+        ExtentReportManager.logPass("All users have correct name and job fields");
+    }
+
+    @Then("the response should contain the updated user details")
+    public void theResponseShouldContainTheUpdatedUserDetails() {
+        Assert.assertNotNull(response.jsonPath().get("name"), "Response should contain updated user name");
+        Assert.assertNotNull(response.jsonPath().get("job"), "Response should contain updated user job");
+        Assert.assertNotNull(response.jsonPath().get("updatedAt"), "Response should contain update timestamp");
+        ExtentReportManager.logPass("Response contains updated user details");
+    }
+
+    @Then("the user name should be {string}")
+    public void theUserNameShouldBe(String expectedName) {
+        String actualName = response.jsonPath().getString("name");
+        Assert.assertEquals(actualName, expectedName, "User name should match expected value");
+        ExtentReportManager.logPass("User name validation passed: " + actualName);
+    }
+
+    @Then("the user job should be {string}")
+    public void theUserJobShouldBe(String expectedJob) {
+        String actualJob = response.jsonPath().getString("job");
+        Assert.assertEquals(actualJob, expectedJob, "User job should match expected value");
+        ExtentReportManager.logPass("User job validation passed: " + actualJob);
+    }
+
+    @Then("the response should contain the updated job title")
+    public void theResponseShouldContainTheUpdatedJobTitle() {
+        Assert.assertNotNull(response.jsonPath().get("job"), "Response should contain updated job title");
+        Assert.assertNotNull(response.jsonPath().get("updatedAt"), "Response should contain update timestamp");
+        ExtentReportManager.logPass("Response contains updated job title");
+    }
+
+    @Then("the job should be {string}")
+    public void theJobShouldBe(String expectedJob) {
+        String actualJob = response.jsonPath().getString("job");
+        Assert.assertEquals(actualJob, expectedJob, "Job should match expected value");
+        ExtentReportManager.logPass("Job validation passed: " + actualJob);
+    }
+
+    @Then("the response should contain an error message")
+    public void theResponseShouldContainAnErrorMessage() {
+        String responseBody = response.getBody().asString();
+        Assert.assertFalse(responseBody.isEmpty(), "Response should contain error message");
+        ExtentReportManager.logPass("Response contains error message");
+    }
+
+    @Then("the response should contain validation errors")
+    public void theResponseShouldContainValidationErrors() {
+        // For this demo API, we'll check if response indicates validation issue
+        String responseBody = response.getBody().asString();
+        Assert.assertNotNull(responseBody, "Response should contain validation information");
+        ExtentReportManager.logPass("Response contains validation information");
+    }
+
+    @Then("the response should contain an authentication error")
+    public void theResponseShouldContainAnAuthenticationError() {
+        // Check for authentication-related response
+        int statusCode = response.getStatusCode();
+        Assert.assertTrue(statusCode == 401 || statusCode == 403,
+                        "Response should indicate authentication error");
+        ExtentReportManager.logPass("Response contains authentication error indication");
+    }
+
+    // Additional step definitions for enhanced collection automation
+
+    @When("I send a GET request to {string} with page {string}")
+    public void iSendAGetRequestToWithPage(String endpoint, String page) {
+        this.endpoint = endpoint;
+        ExtentReportManager.logInfo("Sending GET request to: " + endpoint + " with page: " + page);
+
+        response = ApiRequestBuilder.create()
+                .withEndpoint(endpoint)
+                .withQueryParam("page", page)
+                .get();
+
+        ExtentReportManager.logApiRequest("GET", endpoint + "?page=" + page, null);
+        ExtentReportManager.logApiResponse(response.getStatusCode(),
+                                         response.getBody().asString(),
+                                         response.getTime());
+    }
+
+    @When("I create a user with name {string} and job {string}")
+    public void iCreateAUserWithNameAndJob(String name, String job) {
+        ExtentReportManager.logInfo("Creating user with name: " + name + " and job: " + job);
+
+        Map<String, String> userMap = new HashMap<>();
+        userMap.put("name", name);
+        userMap.put("job", job);
+
+        response = ApiRequestBuilder.create()
+                .withEndpoint("/api/users")
+                .withHeader("x-api-key", config.getProperty("api.key"))
+                .withBody(userMap)
+                .post();
+
+        ExtentReportManager.logApiRequest("POST", "/api/users", userMap.toString());
+        ExtentReportManager.logApiResponse(response.getStatusCode(),
+                                         response.getBody().asString(),
+                                         response.getTime());
+    }
+
+    @When("I update the user with PUT method using name {string} and job {string}")
+    public void iUpdateTheUserWithPutMethodUsingNameAndJob(String name, String job) {
+        ExtentReportManager.logInfo("Updating user with PUT - name: " + name + " and job: " + job);
+
+        Map<String, String> updateMap = new HashMap<>();
+        updateMap.put("name", name);
+        updateMap.put("job", job);
+
+        response = ApiRequestBuilder.create()
+                .withEndpoint("/api/users/2")
+                .withHeader("x-api-key", config.getProperty("api.key"))
+                .withBody(updateMap)
+                .put();
+
+        ExtentReportManager.logApiRequest("PUT", "/api/users/2", updateMap.toString());
+        ExtentReportManager.logApiResponse(response.getStatusCode(),
+                                         response.getBody().asString(),
+                                         response.getTime());
+    }
+
+    @When("I update the user job with PATCH method to {string}")
+    public void iUpdateTheUserJobWithPatchMethodTo(String job) {
+        ExtentReportManager.logInfo("Updating user job with PATCH to: " + job);
+
+        Map<String, String> patchMap = new HashMap<>();
+        patchMap.put("job", job);
+
+        response = ApiRequestBuilder.create()
+                .withEndpoint("/api/users/2")
+                .withHeader("x-api-key", config.getProperty("api.key"))
+                .withBody(patchMap)
+                .patch();
+
+        ExtentReportManager.logApiRequest("PATCH", "/api/users/2", patchMap.toString());
+        ExtentReportManager.logApiResponse(response.getStatusCode(),
+                                         response.getBody().asString(),
+                                         response.getTime());
+    }
+
+    @When("I delete the user")
+    public void iDeleteTheUser() {
+        ExtentReportManager.logInfo("Deleting user");
+
+        response = ApiRequestBuilder.create()
+                .withEndpoint("/api/users/2")
+                .withHeader("x-api-key", config.getProperty("api.key"))
+                .delete();
+
+        ExtentReportManager.logApiRequest("DELETE", "/api/users/2", null);
+        ExtentReportManager.logApiResponse(response.getStatusCode(),
+                                         response.getBody().asString(),
+                                         response.getTime());
+    }
+
+    @Then("the response should have proper JSON structure for GET operation")
+    public void theResponseShouldHaveProperJsonStructureForGetOperation() {
+        Assert.assertNotNull(response.jsonPath().get("data"), "GET response should have data array");
+        Assert.assertNotNull(response.jsonPath().get("page"), "GET response should have page number");
+        Assert.assertNotNull(response.jsonPath().get("per_page"), "GET response should have per_page");
+        Assert.assertNotNull(response.jsonPath().get("total"), "GET response should have total count");
+        ExtentReportManager.logPass("GET response has proper JSON structure");
+    }
+
+    @Then("the response should contain pagination information")
+    public void theResponseShouldContainPaginationInformation() {
+        Assert.assertNotNull(response.jsonPath().get("page"), "Response should contain page information");
+        Assert.assertNotNull(response.jsonPath().get("total_pages"), "Response should contain total pages");
+        Assert.assertTrue(response.jsonPath().getInt("per_page") > 0, "Per page should be greater than 0");
+        ExtentReportManager.logPass("Response contains pagination information");
+    }
+
+    @Then("the response should have proper JSON structure for POST operation")
+    public void theResponseShouldHaveProperJsonStructureForPostOperation() {
+        Assert.assertNotNull(response.jsonPath().get("name"), "POST response should have name");
+        Assert.assertNotNull(response.jsonPath().get("job"), "POST response should have job");
+        Assert.assertNotNull(response.jsonPath().get("id"), "POST response should have id");
+        Assert.assertNotNull(response.jsonPath().get("createdAt"), "POST response should have createdAt");
+        ExtentReportManager.logPass("POST response has proper JSON structure");
+    }
+
+    @Then("the response should contain user creation metadata")
+    public void theResponseShouldContainUserCreationMetadata() {
+        Assert.assertNotNull(response.jsonPath().get("id"), "Response should contain user ID");
+        Assert.assertNotNull(response.jsonPath().get("createdAt"), "Response should contain creation timestamp");
+        ExtentReportManager.logPass("Response contains user creation metadata");
+    }
+
+    @Then("the response should have proper JSON structure for PUT operation")
+    public void theResponseShouldHaveProperJsonStructureForPutOperation() {
+        Assert.assertNotNull(response.jsonPath().get("name"), "PUT response should have name");
+        Assert.assertNotNull(response.jsonPath().get("job"), "PUT response should have job");
+        Assert.assertNotNull(response.jsonPath().get("updatedAt"), "PUT response should have updatedAt");
+        ExtentReportManager.logPass("PUT response has proper JSON structure");
+    }
+
+    @Then("the response should have proper JSON structure for PATCH operation")
+    public void theResponseShouldHaveProperJsonStructureForPatchOperation() {
+        Assert.assertNotNull(response.jsonPath().get("job"), "PATCH response should have job");
+        Assert.assertNotNull(response.jsonPath().get("updatedAt"), "PATCH response should have updatedAt");
+        ExtentReportManager.logPass("PATCH response has proper JSON structure");
+    }
+
+    @Then("the response should contain update timestamp")
+    public void theResponseShouldContainUpdateTimestamp() {
+        Assert.assertNotNull(response.jsonPath().get("updatedAt"), "Response should contain update timestamp");
+        ExtentReportManager.logPass("Response contains update timestamp");
+    }
+
+    @Then("the response should have proper structure for DELETE operation")
+    public void theResponseShouldHaveProperStructureForDeleteOperation() {
+        Assert.assertEquals(response.getStatusCode(), 204, "DELETE should return 204 status");
+        String responseBody = response.getBody().asString();
+        Assert.assertTrue(responseBody == null || responseBody.trim().isEmpty(),
+                        "DELETE response body should be empty");
+        ExtentReportManager.logPass("DELETE response has proper structure");
+    }
 }

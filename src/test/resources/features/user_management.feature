@@ -108,3 +108,130 @@ Feature: User Management API
     Then all users should be created successfully
     And each user should have a unique ID
     And each user should have the correct name and job
+
+  @collection @smoke
+  Scenario: Complete Postman Collection Automation - Get Users
+    Given I have a valid API endpoint "/api/users"
+    When I send a GET request with page "2"
+    Then the response status code should be 200
+    And the response should contain user data
+    And the response time should be less than 5000 milliseconds
+
+  @collection @regression
+  Scenario: Complete Postman Collection Automation - Create User
+    Given I have a valid API endpoint "/api/users"
+    And I have user data:
+      | name  | job         |
+      | Rushi | QA Engineer |
+    When I send a POST request with the user data
+    Then the response status code should be 201
+    And the response should contain the created user details
+    And the user name should be "Rushi"
+    And the user job should be "QA Engineer"
+    And the response should have a valid user ID
+    And the response should have a creation timestamp
+
+  @collection @regression
+  Scenario: Complete Postman Collection Automation - Update User PUT
+    Given I have a valid API endpoint "/api/users/2"
+    And I have updated user data:
+      | name  | job                |
+      | Rushi | Senior QA Engineer |
+    When I send a PUT request with the updated data
+    Then the response status code should be 200
+    And the response should contain the updated user details
+    And the user name should be "Rushi"
+    And the user job should be "Senior QA Engineer"
+
+  @collection @regression
+  Scenario: Complete Postman Collection Automation - Update User PATCH
+    Given I have a valid API endpoint "/api/users/2"
+    And I have partial update data:
+      | job |
+      | Lead QA Engineer |
+    When I send a PATCH request with the partial data
+    Then the response status code should be 200
+    And the response should contain the updated job title
+    And the job should be "Lead QA Engineer"
+
+  @collection @regression
+  Scenario: Complete Postman Collection Automation - Delete User
+    Given I have a valid API endpoint "/api/users/2"
+    When I send a DELETE request
+    Then the response status code should be 204
+    And the response body should be empty
+
+  @collection @workflow
+  Scenario: Complete Collection Workflow End-to-End
+    Given the API base URL is configured
+    And I have valid authentication credentials
+
+    # Step 1: Get Users
+    When I send a GET request to "/api/users" with page "1"
+    Then the response status code should be 200
+    And the response should contain user data
+
+    # Step 2: Create User
+    When I create a user with name "Test User" and job "Automation Tester"
+    Then the response status code should be 201
+    And the response should contain the created user details
+
+    # Step 3: Update User (PUT)
+    When I update the user with PUT method using name "Test User Updated" and job "Senior Automation Tester"
+    Then the response status code should be 200
+    And the response should contain the updated user details
+
+    # Step 4: Update User (PATCH)
+    When I update the user job with PATCH method to "Lead Automation Tester"
+    Then the response status code should be 200
+    And the response should contain the updated job title
+
+    # Step 5: Delete User
+    When I delete the user
+    Then the response status code should be 204
+    And the response body should be empty
+
+  @collection @comprehensive
+  Scenario Outline: Collection Endpoints with Multiple Test Data
+    Given I have a valid API endpoint "/api/users"
+    When I create a user with name "<name>" and job "<job>"
+    Then the response status code should be 201
+    And the user name should be "<name>"
+    And the user job should be "<job>"
+    And the response should have a valid user ID
+
+    Examples:
+      | name           | job                    |
+      | John Doe       | Software Engineer      |
+      | Jane Smith     | Product Manager        |
+      | Mike Johnson   | DevOps Specialist      |
+      | Sarah Wilson   | UX Designer           |
+      | Tom Brown      | Data Analyst          |
+
+  @collection @api_validation
+  Scenario: Validate All Collection Endpoints Response Structure
+    Given the API base URL is configured
+
+    # Validate GET endpoint
+    When I send a GET request to "/api/users" with page "1"
+    Then the response should have proper JSON structure for GET operation
+    And the response should contain pagination information
+
+    # Validate POST endpoint
+    When I create a user with name "Structure Test" and job "QA Tester"
+    Then the response should have proper JSON structure for POST operation
+    And the response should contain user creation metadata
+
+    # Validate PUT endpoint
+    When I update the user with PUT method using name "Structure Test Updated" and job "Senior QA Tester"
+    Then the response should have proper JSON structure for PUT operation
+    And the response should contain update timestamp
+
+    # Validate PATCH endpoint
+    When I update the user job with PATCH method to "Lead QA Tester"
+    Then the response should have proper JSON structure for PATCH operation
+    And the response should contain update timestamp
+
+    # Validate DELETE endpoint
+    When I delete the user
+    Then the response should have proper structure for DELETE operation
