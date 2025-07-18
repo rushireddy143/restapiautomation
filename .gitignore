@@ -1,0 +1,402 @@
+# ========================================
+# API Automation Framework - .gitignore
+# ========================================
+
+# ========================================
+# Java & Maven
+# ========================================
+# Compiled class files
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# ========================================
+# IDE Files
+# ========================================
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+.idea_modules/
+
+# Eclipse
+.metadata
+bin/
+tmp/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+.project
+.classpath
+.factorypath
+.buildpath
+.target
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# ========================================
+# Test Reports & Results
+# ========================================
+# TestNG Reports
+test-output/
+testng-results.xml
+testng-failed.xml
+
+# Surefire Reports
+**/surefire-reports/
+**/failsafe-reports/
+
+# Allure Reports
+allure-results/
+allure-report/
+.allure/
+
+# Cucumber Reports
+cucumber-reports/
+cucumber.json
+cucumber.xml
+
+# Extent Reports
+extent-reports/
+ExtentReports/
+extent-config.xml
+
+# Custom Reports
+reports/
+test-reports/
+html-reports/
+
+# ========================================
+# Logs & Temporary Files
+# ========================================
+# Log files
+*.log
+logs/
+log/
+*.log.*
+*.out
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Cache files
+.cache/
+cache/
+
+# ========================================
+# Configuration & Sensitive Data
+# ========================================
+# Environment-specific configs (keep templates)
+config/local.properties
+config/personal.properties
+config/secret.properties
+
+# API Keys & Credentials (NEVER commit these)
+**/api-keys.properties
+**/credentials.properties
+**/secrets.properties
+**/*-secret.properties
+**/*-credentials.properties
+**/*-keys.properties
+
+# Database connection strings
+**/database.properties
+**/db-config.properties
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# ========================================
+# Test Data & Screenshots
+# ========================================
+# Screenshots from failed tests
+screenshots/
+test-screenshots/
+failure-screenshots/
+evidence/
+
+# Test data files (exclude sensitive data)
+test-data/sensitive/
+test-data/personal/
+test-data/production/
+
+# Generated test data
+generated-data/
+fake-data/
+
+# ========================================
+# Performance & Monitoring
+# ========================================
+# JMeter results
+*.jtl
+jmeter-results/
+performance-results/
+
+# Profiling data
+*.hprof
+*.prof
+
+# Monitoring data
+monitoring/
+metrics/
+
+# ========================================
+# CI/CD & Build Artifacts
+# ========================================
+# Jenkins workspace
+.jenkins/
+jenkins-workspace/
+
+# Build artifacts
+build/
+dist/
+artifacts/
+
+# Docker
+.dockerignore
+docker-compose.override.yml
+
+# Kubernetes
+k8s-secrets/
+
+# ========================================
+# Package Managers
+# ========================================
+# Node.js (for Newman/Postman CLI)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+package-lock.json
+yarn.lock
+
+# Python (if any Python scripts)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ========================================
+# Operating System Files
+# ========================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msix
+*.msm
+*.msp
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ========================================
+# Security & Certificates
+# ========================================
+# SSL Certificates
+*.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.truststore
+
+# GPG keys
+*.gpg
+*.asc
+
+# ========================================
+# Backup & Archive Files
+# ========================================
+*.zip
+*.tar.gz
+*.rar
+*.7z
+*.backup
+*-backup.*
+*.old
+*-old.*
+
+# ========================================
+# Custom Framework Files
+# ========================================
+# Local test configurations
+local-config/
+personal-config/
+
+# User-specific test suites
+**/personal-tests.xml
+**/local-tests.xml
+
+# Custom scripts (keep templates)
+run-local-tests.*
+personal-run-scripts.*
+
+# ========================================
+# Database Files
+# ========================================
+# H2 Database files
+*.h2.db
+*.mv.db
+*.trace.db
+
+# SQLite
+*.sqlite
+*.sqlite3
+*.db
+
+# ========================================
+# Postman & API Tools
+# ========================================
+# Postman generated files
+postman-collection-runs/
+newman-reports/
+postman-exports/
+
+# Insomnia
+.insomnia/
+
+# ========================================
+# Documentation Build
+# ========================================
+# Generated documentation
+docs/build/
+site/
+_site/
+
+# ========================================
+# Miscellaneous
+# ========================================
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+*.elc
+auto-save-list
+tramp
+.\#*
+
+# JetBrains
+*.iml
+
+# Gradle (if used)
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+
+# SonarQube
+.sonar/
+.scannerwork/
+
+# ========================================
+# Keep These Files (Negation Rules)
+# ========================================
+# Keep example/template configuration files
+!config/example.properties
+!config/template.properties
+!config/dev-template.properties
+!config/staging-template.properties
+!config/prod-template.properties
+
+# Keep sample test data
+!test-data/samples/
+!test-data/examples/
+
+# Keep documentation
+!docs/
+!README.md
+!*.md
+
+# Keep CI/CD configuration files
+!.github/
+!.gitlab-ci.yml
+!Jenkinsfile*
+!docker-compose.yml
+!Dockerfile
+
+# Keep Maven wrapper
+!.mvn/wrapper/maven-wrapper.properties
+
+# ========================================
+# Project-Specific Exclusions
+# ========================================
+# Add any project-specific files to ignore below
+# Example:
+# custom-reports/
+# integration-test-results/
+# load-test-data/
